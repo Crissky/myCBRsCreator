@@ -15,6 +15,13 @@ def createVolFolders(directory, mangaName, volumeName='Vol', sizeCap=2, start=1,
             print(completeFolderName, "was not created.")
             continue
 
+def rename(filename, numbername):
+    file_basename = os.path.basename(filename)
+    file_basename, extension = os.path.splitext(file_basename)
+
+    return '{:03d}{}'.format(numbername, extension)
+    
+    
 def isImage(filename):
     image_extensions = ['.png', '.jpg']
     image_extensions = [x.lower() for x in image_extensions]
@@ -58,11 +65,15 @@ def getAllFilePaths(directory, mode='localpath'):
 #and extra if it has less than two numbers
 def getCap(filename):
     from re import findall
+    filename = os.path.basename(filename)
     numList = findall(r'\d+', filename)
-    if(len(numList) < 2):
+    if( not numList[-1] == filename[-len(numList[-1]):] ):
         numList = ['extra']
-        
-    return numList[-1]
+    try:
+        cap = '{:03d}'.format(int(numList[-1]))
+    except:
+        cap = numList[-1]
+    return cap
     
 #Create a zip file based on a list of file paths
 def zipFileList(listPaths, zipname, directory, extension='zip'):
@@ -70,7 +81,7 @@ def zipFileList(listPaths, zipname, directory, extension='zip'):
     pathZip = os.path.join(directory, zipname)
     with ZipFile(pathZip,'w') as mZip:
         for file in listPaths:
-            mZip.write(file)
+            mZip.write(file, os.path.basename(file))
 
 #Create zips for files in all subfolders 
 def createZips(load_directory, save_directory=None, extension='zip', mode='localpath', feedback=False):
@@ -90,6 +101,33 @@ def createZips(load_directory, save_directory=None, extension='zip', mode='local
 #Create CBRs for files in all subfolders
 def createCBRs(load_directory, save_directory=None, mode='localpath', feedback=False):
     createZips(load_directory, save_directory, 'cbr', mode, feedback)
+
+def mergeCBRs(load_directory, save_directory=None, matchText=None, filesList=None):
+    extension = ".cbr"
+    if(not save_directory):
+        save_directory = load_directory
+        print('save directory not informed, files will be created in the load directory')
+    if(not matchText):
+        raise ValueError('Not informed "matchText"')
+    if(not filesList):
+        filesList = [x for x in os.listdir(load_directory)\
+                     if ( os.path.isfile(os.path.join(load_directory, x)) and matchText in x)]
+
+    targetfile = os.path.join(save_directory, (matchText+extension))
+    try:
+        os.remove(targetfile)
+    except:
+        pass
+    with ZipFile(targetfile, 'a') as mainCBR:
+        count = 0
+        for file in filesList:
+            print('Copiando', file, 'para', matchText)
+            with ZipFile(os.path.join(load_directory, file), 'r') as tempCBR:
+                for name in tempCBR.namelist():
+                    extension = os.path.splitext(name)[1].lower()
+                    mainCBR.writestr('{:03d}{}'.format(count, extension), tempCBR.open(name).read())
+                    count +=1
+    
     
 if(__name__ == "__main__"):
     import sys
@@ -99,5 +137,6 @@ if(__name__ == "__main__"):
     feedback = False if len(sys.argv) <= 3 else (sys.argv[3].lower()=='true')
     save_directory = None if len(sys.argv) <= 4 else sys.argv[4]
 
-    createCBRs(load_directory, mode=mode, feedback=feedback, save_directory=save_directory)
+    createCBRs(load_directory, mode=mode, feedback=feedback, save_directory=save_directory) 
     '''createCBRs('D:\Arquivos\#HQs\Vinland Saga', mode='fatherpath')'''
+    
