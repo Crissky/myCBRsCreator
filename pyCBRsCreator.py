@@ -1,6 +1,7 @@
 from zipfile import ZipFile
 import os
 
+numExtra = 1
 #Create folders for manga volumes
 #'directory' path where folders will be created
 #'mangaName' Start folder name
@@ -65,10 +66,12 @@ def getAllFilePaths(directory, mode='localpath'):
 #and extra if it has less than two numbers
 def getCap(filename):
     from re import findall
+    global numExtra
     filename = os.path.basename(filename)
     numList = findall(r'\d+', filename)
-    if( not numList[-1] == filename[-len(numList[-1]):] ):
-        numList = ['extra']
+    if( not numList[-1] == filename[-len(numList[-1]):] or 'extra' in filename.lower()):
+        numList = ['Extra {:03d}'.format(numExtra)]
+        numExtra += 1
     try:
         cap = '{:03d}'.format(int(numList[-1]))
     except:
